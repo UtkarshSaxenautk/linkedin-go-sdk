@@ -1,41 +1,43 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
+	"net/http"
+	"os"
 
 	"github.com/UtkarshSaxenautk/linkedin-go-sdk/linkedin"
 )
 
+var auth *linkedin.LinkedInAuth
+
 func main() {
-	clientID := "YOUR_CLIENT_ID"
-	clientSecret := "YOUR_CLIENT_SECRET"
+	clientID := os.Getenv("LINKEDIN_CLIENT_ID")
+	clientSecret := os.Getenv("LINKEDIN_CLIENT_SECRET")
 	redirectURL := "http://localhost:8080/callback"
 
-	auth := linkedin.NewLinkedInAuth(clientID, clientSecret, redirectURL)
-	fmt.Println("Visit this URL to authenticate:", auth.GetAuthURL("state123"))
-
-	// Assume we received `authCode` from LinkedIn after user login
-	authCode := "RECEIVED_AUTH_CODE"
-	token, err := auth.ExchangeCode(context.Background(), authCode)
-	if err != nil {
-		log.Fatal(err)
+	if clientID == "" || clientSecret == "" {
+		log.Fatal("Please set LINKEDIN_CLIENT_ID and LINKEDIN_CLIENT_SECRET environment variables.")
 	}
 
-	client := linkedin.NewClient(token.AccessToken)
+	auth = linkedin.NewLinkedInAuth(clientID, clientSecret, redirectURL)
 
-	// Fetch Profile
-	profile, err := client.GetProfile()
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("Welcome, %s %s!\n", profile.FirstName, profile.LastName)
+	http.HandleFunc("/", loginHandler)
+	http.HandleFunc("/callback", callbackHandler)
 
-	// Post an update
-	err = client.CreatePost("Hello LinkedIn from Go!")
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("Post successful!")
+	fmt.Println("Server is running at http://localhost:8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+// loginHandler redirects the user to LinkedIn's OAuth page.
+func loginHandler(w http.ResponseWriter, r *http.Request) {
+	authURL, state := auth.GetAuthURL()
+	// In production, store the generated state in a secure session for validation.
+	fmt.Printf("Generated state: %s\n", state)
+	http.Redirect(w, r, authURL, http.StatusTemporaryRedirect)
+}
+
+// callbackHandler processes the OAuth callback.
+func callbackHandler(w http.ResponseWriter, r *http.Request) {
+	auth.HandleCallback(w, r)
 }
