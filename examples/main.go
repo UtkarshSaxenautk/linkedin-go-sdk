@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/UtkarshSaxenautk/linkedin-go-sdk/linkedin"
 )
@@ -12,8 +11,8 @@ import (
 var auth *linkedin.LinkedInAuth
 
 func main() {
-	clientID := os.Getenv("LINKEDIN_CLIENT_ID")
-	clientSecret := os.Getenv("LINKEDIN_CLIENT_SECRET")
+	clientID := "test_client_id"
+	clientSecret := "test_client_secret"
 	redirectURL := "http://localhost:8080/callback"
 
 	if clientID == "" || clientSecret == "" {
